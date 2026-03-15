@@ -100,4 +100,6 @@ task copyApkToDesktop(type: Copy) {
     }
 }
 
-assembleDebug.finalizedBy copyApkToDesktop
+afterEvaluate {
+    tasks.getByName('assembleDebug').finalizedBy copyApkToDesktop
+}
