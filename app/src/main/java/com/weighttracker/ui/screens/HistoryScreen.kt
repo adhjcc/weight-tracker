@@ -33,6 +33,7 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val records = uiState.records ?: emptyList()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingRecord by remember { mutableStateOf<WeightRecord?>(null) }
@@ -66,7 +67,7 @@ fun HistoryScreen(
             )
         }
     ) { padding ->
-        if (uiState.records.isEmpty()) {
+        if (records.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -87,7 +88,7 @@ fun HistoryScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.records, key = { it.id }) { record ->
+                items(records, key = { it.id }) { record ->
                     val bmi = calculateBmi(record.weight, height)
                     val category = getBmiCategory(bmi)
 
@@ -233,7 +234,7 @@ fun HistoryScreen(
             text = { Text("确定要导出所有记录为CSV格式吗？") },
             confirmButton = {
                 TextButton(onClick = {
-                    val csv = viewModel.exportToCsv(uiState.records)
+                    val csv = viewModel.exportToCsv(records)
                     onExportCsv(csv)
                     showExportDialog = false
                 }) {

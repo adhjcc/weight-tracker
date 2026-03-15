@@ -57,11 +57,12 @@ fun HomeScreen(
     val timeRanges = listOf(7, 14, 30, 90, 180, 360)
     val timeRangeLabels = mapOf(7 to "7天", 14 to "14天", 30 to "30天", 90 to "90天", 180 to "180天", 360 to "360天")
 
-    val latestRecord = uiState.records.maxByOrNull { it.date }
+    val records = uiState.records ?: emptyList()
+    val latestRecord = records.maxByOrNull { it.date }
     val latestBmi = latestRecord?.let { calculateBmi(it.weight, settings.height) }
     val latestCategory = latestBmi?.let { getBmiCategory(it) }
 
-    val statistics = viewModel.getStatistics(uiState.records, settings.height, settings.targetWeight)
+    val statistics = viewModel.getStatistics(records, settings.height, settings.targetWeight)
 
     val context = LocalContext.current
 
