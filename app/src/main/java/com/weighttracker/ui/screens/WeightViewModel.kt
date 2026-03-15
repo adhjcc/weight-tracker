@@ -13,6 +13,7 @@ import com.weighttracker.domain.model.calculateBmi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import kotlinx.coroutines.flow.flow
 
 class WeightViewModel(
     private val repository: WeightRepository,
@@ -24,6 +25,8 @@ class WeightViewModel(
 
     val settings: StateFlow<UserSettings> = settingsDataStore.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
+
+    private val weightDataMap = mutableMapOf<LocalDate, Double?>()
 
     init {
         loadRecords()
@@ -42,6 +45,25 @@ class WeightViewModel(
         viewModelScope.launch {
             repository.getAllRecords().collect { records ->
                 _uiState.update { it.copy(records = records) }
+                updateWeightDataMap(records)
+            }
+        }
+    }
+
+    private fun updateWeightDataMap(records: List<WeightRecord>) {
+        val today = LocalDate.now()
+        val startDate = today.minusDays(359)
+
+        weightDataMap.clear()
+
+        for (i in 0..359) {
+            val date = startDate.plusDays(i.toLong())
+            weightDataMap[date] = null
+        }
+
+        records.forEach { record ->
+            if (!record.date.isBefore(startDate) && !record.date.isAfter(today)) {
+                weightDataMap[record.date] = record.weight
             }
         }
     }
@@ -73,44 +95,48 @@ class WeightViewModel(
     }
 
     fun getChartData(startDate: LocalDate, endDate: LocalDate, height: Float): Flow<List<WeightWithBmi>> {
-        return repository.getRecordsBetween(startDate, endDate).map { records ->
+        return flow {
             val filledData = mutableListOf<WeightWithBmi>()
-            val sortedRecords = records.sortedBy { it.date }
             val today = LocalDate.now()
             
-            val actualEndDate = if (endDate.isAfter(today)) today else endDate
-            val actualStartDate = startDate
-            
-            var lastKnownWeight: Double? = null
-            
-            var currentDate = actualStartDate
-            while (!currentDate.isAfter(actualEndDate)) {
-                val record = records.find { it.date == currentDate }
-                if (record != null) {
-                    lastKnownWeight = record.weight
-                    filledData.add(WeightWithBmi(record.weight, calculateBmi(record.weight, height), currentDate))
-                } else if (lastKnownWeight != null) {
-                    filledData.add(WeightWithBmi(lastKnownWeight, calculateBmi(lastKnownWeight, height), currentDate))
-                } else {
-                    val futureRecord = sortedRecords.find { !it.date.isBefore(currentDate) }
-                    if (futureRecord != null) {
-                        lastKnownWeight = futureRecord.weight
-                        filledData.add(WeightWithBmi(futureRecord.weight, calculateBmi(futureRecord.weight, height), currentDate))
-                    }
+            var currentDate = startDate
+            while (!currentDate.isAfter(endDate) && !currentDate.isAfter(today)) {
+                val weight = findWeightForDate(currentDate)
+                if (weight != null) {
+                    filledData.add(WeightWithBmi(weight, calculateBmi(weight, height), currentDate))
                 }
                 currentDate = currentDate.plusDays(1)
             }
-            
-            if (sortedRecords.isNotEmpty() && filledData.isNotEmpty()) {
-                val lastData = filledData.last()
-                val latestRecord = sortedRecords.last()
-                if (lastData.date.isBefore(today)) {
-                    filledData.add(WeightWithBmi(latestRecord.weight, calculateBmi(latestRecord.weight, height), today))
+
+            if (filledData.isNotEmpty() && !endDate.isAfter(today)) {
+                val latestWeight = findWeightForDate(today)
+                if (latestWeight != null && filledData.last().date.isBefore(today)) {
+                    filledData.add(WeightWithBmi(latestWeight, calculateBmi(latestWeight, height), today))
                 }
             }
-            
-            filledData
+
+            emit(filledData)
         }
+    }
+
+    private fun findWeightForDate(targetDate: LocalDate): Double? {
+        weightDataMap[targetDate]?.let { return it }
+
+        for (offset in 1..360) {
+            val beforeDate = targetDate.minusDays(offset.toLong())
+            if (weightDataMap.containsKey(beforeDate) && weightDataMap[beforeDate] != null) {
+                return weightDataMap[beforeDate]
+            }
+        }
+
+        for (offset in 1..360) {
+            val afterDate = targetDate.plusDays(offset.toLong())
+            if (weightDataMap.containsKey(afterDate) && weightDataMap[afterDate] != null) {
+                return weightDataMap[afterDate]
+            }
+        }
+
+        return null
     }
 
     fun getStatistics(records: List<WeightRecord>, height: Float, targetWeight: Float): Statistics {
