@@ -81,3 +81,23 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 }
+
+def getTimestamp() {
+    return new Date().format('yyyyMMdd_HHmmss')
+}
+
+task copyApkToDesktop(type: Copy) {
+    def timestamp = getTimestamp()
+    def apkFile = "${buildDir}/outputs/apk/debug/app-debug.apk"
+    def destDir = "/mnt/c/Users/adhjc/Desktop/app_test/weight-tracker"
+    
+    from(apkFile)
+    into(destDir)
+    rename { "weight-tracker_${timestamp}.apk" }
+    
+    doFirst {
+        println "Copying APK to desktop with timestamp: weight-tracker_${timestamp}.apk"
+    }
+}
+
+assembleDebug.finalizedBy copyApkToDesktop
