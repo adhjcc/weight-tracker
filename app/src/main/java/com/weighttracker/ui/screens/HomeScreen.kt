@@ -407,7 +407,16 @@ fun WeightChart(
                 lineWidth = 2f
                 circleRadius = 3f
                 setDrawValues(false)
-                mode = LineDataSet.Mode.CUBIC_BEZIER
+                mode = LineDataSet.Mode.LINEAR
+            }
+
+            chart.xAxis.valueFormatter = object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String {
+                    val index = value.toInt()
+                    return if (index >= 0 && index < data.size) {
+                        data[index].date.format(DateTimeFormatter.ofPattern("MM/dd"))
+                    } else ""
+                }
             }
 
             chart.data = LineData(dataSet)
