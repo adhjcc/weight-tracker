@@ -262,7 +262,7 @@ fun HomeScreen(
                             }
                         }
 
-                        if (showChart && uiState.recordCount >= 7) {
+                        if (showChart && uiState.recordCount >= 1) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -305,10 +305,10 @@ fun HomeScreen(
                                         .height(200.dp)
                                 )
                             }
-                        } else if (uiState.recordCount < 7) {
+                        } else if (uiState.recordCount < 1) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "记录超过7天后将显示折线图",
+                                text = "暂无数据",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth(),

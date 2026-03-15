@@ -76,6 +76,7 @@ class WeightViewModel(
             } else {
                 repository.insertRecord(WeightRecord(weight = weight, date = date, note = note))
             }
+            refreshWeightDataMap()
             loadRecords()
         }
     }
@@ -83,6 +84,7 @@ class WeightViewModel(
     fun deleteRecord(record: WeightRecord) {
         viewModelScope.launch {
             repository.deleteRecord(record)
+            refreshWeightDataMap()
             loadRecords()
         }
     }
@@ -90,7 +92,26 @@ class WeightViewModel(
     fun updateRecord(record: WeightRecord) {
         viewModelScope.launch {
             repository.updateRecord(record)
+            refreshWeightDataMap()
             loadRecords()
+        }
+    }
+
+    private fun refreshWeightDataMap() {
+        val today = LocalDate.now()
+        val startDate = today.minusDays(359)
+
+        weightDataMap.clear()
+        for (i in 0..359) {
+            val date = startDate.plusDays(i.toLong())
+            weightDataMap[date] = null
+        }
+
+        val records = uiState.value.records
+        records.forEach { record ->
+            if (!record.date.isBefore(startDate) && !record.date.isAfter(today)) {
+                weightDataMap[record.date] = record.weight
+            }
         }
     }
 
