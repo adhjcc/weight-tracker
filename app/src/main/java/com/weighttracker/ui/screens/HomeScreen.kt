@@ -4,9 +4,11 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -265,14 +267,16 @@ fun HomeScreen(
                         if (showChart && uiState.recordCount >= 7) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 timeRanges.forEach { range ->
                                     FilterChip(
                                         selected = selectedTimeRange == range,
                                         onClick = { selectedTimeRange = range },
-                                        label = { Text(timeRangeLabels[range] ?: "$range", style = MaterialTheme.typography.labelSmall) }
+                                        label = { Text(timeRangeLabels[range] ?: "$range") }
                                     )
                                 }
                             }

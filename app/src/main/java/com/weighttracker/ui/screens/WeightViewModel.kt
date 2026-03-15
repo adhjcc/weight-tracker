@@ -75,38 +75,42 @@ class WeightViewModel(
     fun getChartData(startDate: LocalDate, endDate: LocalDate, height: Float): Flow<List<WeightWithBmi>> {
         return repository.getRecordsBetween(startDate, endDate).map { records ->
             val filledData = mutableListOf<WeightWithBmi>()
-            var currentDate = startDate
-
-            while (!currentDate.isAfter(endDate)) {
+            val sortedRecords = records.sortedBy { it.date }
+            val today = LocalDate.now()
+            
+            val actualEndDate = if (endDate.isAfter(today)) today else endDate
+            val actualStartDate = startDate
+            
+            var lastKnownWeight: Double? = null
+            
+            var currentDate = actualStartDate
+            while (!currentDate.isAfter(actualEndDate)) {
                 val record = records.find { it.date == currentDate }
                 if (record != null) {
+                    lastKnownWeight = record.weight
                     filledData.add(WeightWithBmi(record.weight, calculateBmi(record.weight, height), currentDate))
+                } else if (lastKnownWeight != null) {
+                    filledData.add(WeightWithBmi(lastKnownWeight, calculateBmi(lastKnownWeight, height), currentDate))
                 } else {
-                    val filledWeight = findNearestWeight(records, currentDate)
-                    if (filledWeight != null) {
-                        filledData.add(WeightWithBmi(filledWeight, calculateBmi(filledWeight, height), currentDate))
+                    val futureRecord = sortedRecords.find { !it.date.isBefore(currentDate) }
+                    if (futureRecord != null) {
+                        lastKnownWeight = futureRecord.weight
+                        filledData.add(WeightWithBmi(futureRecord.weight, calculateBmi(futureRecord.weight, height), currentDate))
                     }
                 }
                 currentDate = currentDate.plusDays(1)
             }
+            
+            if (sortedRecords.isNotEmpty() && filledData.isNotEmpty()) {
+                val lastData = filledData.last()
+                val latestRecord = sortedRecords.last()
+                if (lastData.date.isBefore(today)) {
+                    filledData.add(WeightWithBmi(latestRecord.weight, calculateBmi(latestRecord.weight, height), today))
+                }
+            }
+            
             filledData
         }
-    }
-
-    private suspend fun findNearestWeight(records: List<WeightRecord>, targetDate: LocalDate): Double? {
-        for (offset in 1..365) {
-            val beforeDate = targetDate.minusDays(offset.toLong())
-            val afterDate = targetDate.plusDays(offset.toLong())
-            
-            val before = records.filter { it.date.isBefore(targetDate) }
-                .maxByOrNull { it.date }
-            
-            val after = records.filter { it.date.isAfter(targetDate) }
-                .minByOrNull { it.date }
-            
-            return before?.weight ?: after?.weight
-        }
-        return null
     }
 
     fun getStatistics(records: List<WeightRecord>, height: Float, targetWeight: Float): Statistics {
