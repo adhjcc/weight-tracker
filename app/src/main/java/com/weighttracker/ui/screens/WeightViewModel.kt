@@ -84,7 +84,7 @@ class WeightViewModel(
     fun deleteRecord(record: WeightRecord) {
         viewModelScope.launch {
             repository.deleteRecord(record)
-            refreshWeightDataMap()
+            weightDataMap[record.date] = null
             loadRecords()
         }
     }
